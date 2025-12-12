@@ -1,0 +1,6 @@
+# Linux (Native Docker Engine) Users:
+# Copy this file to 'compose.override.yaml' to enable host.docker.internal support.
+services:
+  ardupilot-sitl:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

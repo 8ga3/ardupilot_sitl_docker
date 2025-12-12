@@ -1,0 +1,12 @@
+services:
+  ardupilot-sitl:
+    container_name: ardupilot-sitl
+    image: ardupilot-sitl
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # https://github.com/ArduPilot/ardupilot のブランチ名
+        - ARDUPILOT_VERSION=ArduPilot-4.6
+    # containerを実行し続ける
+    entrypoint: "tail -f /dev/null"
