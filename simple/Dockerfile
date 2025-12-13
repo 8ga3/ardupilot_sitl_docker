@@ -34,8 +34,8 @@ ENV PATH="/app/.venv/bin:$PATH"
 COPY uv.lock pyproject.toml /app/
 
 ENV UV_SYSTEM_PYTHON=true \
-    UV_COMPILE_BYTCODE=1 \
-    UV_CAHE_DIR=/app/.cache/uv \
+    UV_COMPILE_BYTECODE=1 \
+    UV_CACHE_DIR=/app/.cache/uv \
     UV_LINK_MODE=copy
 
 RUN uv sync --frozen --no-cache

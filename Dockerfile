@@ -32,7 +32,7 @@ COPY uv.lock pyproject.toml ./
 
 ENV UV_SYSTEM_PYTHON=true \
     UV_COMPILE_BYTECODE=1 \
-    UV_CAHE_DIR=/app/.cache/uv \
+    UV_CACHE_DIR=/app/.cache/uv \
     UV_LINK_MODE=copy \
 	UV_PYTHON_DOWNLOADS=never
 
@@ -70,8 +70,8 @@ RUN apt-get update && apt-get install -y procps \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
- # Create non-root user
- RUN groupadd --system --gid 999 nonroot \
+# Create non-root user
+RUN groupadd --system --gid 999 nonroot \
  && useradd --system --gid 999 --uid 999 --create-home nonroot
 
 WORKDIR /app
