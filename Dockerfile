@@ -66,7 +66,7 @@ FROM python:3.13-slim-bookworm
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies
-RUN apt-get update && apt-get install -y procps \
+RUN apt-get update && apt-get install -y --no-install-recommends procps \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
