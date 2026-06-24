@@ -62,7 +62,7 @@ RUN ./waf sub
 WORKDIR /app
 RUN uv remove empy packaging
 
-FROM python:3.13-slim-bookworm
+FROM python:3.13-slim
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies
