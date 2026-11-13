@@ -1,8 +1,8 @@
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder
+FROM ghcr.io/astral-sh/uv:python3.13-trixie-slim AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y \
 	build-essential \
 	ccache \
 	g++ \
@@ -46,7 +46,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Clone Ardupilot repository
-ENV ARDUPILOT_VERSION=ArduPilot-4.6
+ENV ARDUPILOT_VERSION=ArduPilot-4.7
 RUN git clone --branch ${ARDUPILOT_VERSION} --depth 1 --recurse-submodules https://github.com/ArduPilot/ardupilot.git /app/ardupilot
 WORKDIR /app/ardupilot
 
@@ -66,7 +66,7 @@ FROM python:3.13-slim
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends procps \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends procps \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
