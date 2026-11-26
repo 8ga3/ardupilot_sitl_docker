@@ -8,7 +8,7 @@ services:
       dockerfile: Dockerfile
       args:
         # https://github.com/ArduPilot/ardupilot のブランチ名
-        - ARDUPILOT_VERSION=ArduPilot-4.6
+        - ARDUPILOT_VERSION=ArduPilot-4.7
     tmpfs:
       - /app/logs:uid=999,gid=999
       - /app/terrain:uid=999,gid=999
