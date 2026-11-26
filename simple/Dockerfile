@@ -41,7 +41,9 @@ ENV UV_SYSTEM_PYTHON=true \
 RUN uv sync --frozen --no-cache
 
 # Clone Ardupilot repository
-ENV ARDUPILOT_VERSION=ArduPilot-4.6
+# Branch or tag name of https://github.com/ArduPilot/ardupilot
+# Override with: docker compose build --build-arg ARDUPILOT_VERSION=<branch>
+ARG ARDUPILOT_VERSION=ArduPilot-4.6
 RUN git clone --branch ${ARDUPILOT_VERSION} --depth 1 --recurse-submodules https://github.com/ArduPilot/ardupilot.git /app/ardupilot
 WORKDIR /app/ardupilot
 

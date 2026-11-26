@@ -6,7 +6,7 @@
 
 ### メリット
 
-- SITLに特化した軽量なDockerイメージを提供します。（サイズ：約440~620MB）
+- SITLに特化した軽量なDockerイメージを提供します。（サイズ：約345MB、詳細は[イメージサイズの比較](#イメージサイズの比較)を参照）
 - 軽量化するため、Multi-stageビルドを採用しています。
 - Docker Composeを使用して、簡単にビルドと起動が可能です。
 - amd64およびarm64アーキテクチャに対応しています。
@@ -15,8 +15,11 @@
 ### デメリット
 
 - sim_vehicle.pyと関連スクリプト以外はインストールされません。
+- BlimpとAntennaTrackerは使用できません。（[対応している機体](#対応している機体)を参照）
 - MAVProxyでGUIを必要とする機能（地図表示、コンソールなど）は動作しません。
 - FlightGearなどの外部シミュレーターとの連携はサポートしていません。
+- MAVLinkのdialectは `all` / `ardupilotmega` / `common` / `minimal` / `standard` のみ同梱しています。それ以外（`storm32`、`paparazzi`など）は使用できません。
+- MAVProxyのcesiumモジュールは使用できません。
 
 Author: [@8ga3](https://github.com/8ga3)
 
@@ -29,6 +32,21 @@ Author: [@8ga3](https://github.com/8ga3)
 ```sh
 docker compose up -d
 ```
+
+### 別のバージョンのArduPilotでビルドする
+
+ビルドするArduPilotのバージョンは、`Dockerfile`の`ARG ARDUPILOT_VERSION`で指定しています。値は[ArduPilotリポジトリ](https://github.com/ArduPilot/ardupilot)のブランチ名またはタグ名です。
+
+`Dockerfile`を書き換えずに一時的に別のバージョンでビルドする場合は、`--build-arg`で上書きします。
+
+```sh
+docker compose build --build-arg ARDUPILOT_VERSION=ArduPilot-4.6
+docker compose up -d --no-build
+```
+
+`compose.yaml`で`pull_policy: build`を指定しているため、`--no-build`を付けずに`docker compose up -d`を実行すると、`Dockerfile`のデフォルトのバージョンで再ビルドされ、イメージが上書きされます。別のバージョンのイメージを使い続ける間は、`--no-build`を付けて起動してください。
+
+恒久的にバージョンを変更する場合は、`Dockerfile`の`ARG ARDUPILOT_VERSION`の値を書き換えてください。
 
 ---
 
@@ -51,6 +69,35 @@ docker exec -it ardupilot-sitl \
   --wipe-eeprom \
   --mavproxy-args="--out udp:host.docker.internal:14550 --state-basedir=/tmp/mavlink-sitl"
 ```
+
+---
+
+## 対応している機体
+
+`sim_vehicle.py`の`--vehicle`に指定できる機体のうち、以下のバイナリをビルドしてイメージに含めています。
+
+| `--vehicle`の値 | デフォルトの`--frame` | バイナリ | 対応 |
+| --- | --- | --- | :---: |
+| `ArduCopter` | `quad` | `arducopter` | ○ |
+| `Helicopter`（または `ArduCopter` + `--frame heli`） | `heli` | `arducopter-heli` | ○ |
+| `ArduPlane` | `plane` | `arduplane` | ○ |
+| `Rover` | `rover` | `ardurover` | ○ |
+| `ArduSub` | `vectored` | `ardusub` | ○ |
+| `Blimp` | `Blimp` | `blimp` | × |
+| `AntennaTracker` | `tracker` | `antennatracker` | × |
+
+- ローバーの機体名は`ArduRover`ではなく`Rover`です。（`ArduRover`を指定するとエラーになります）
+- BlimpとAntennaTrackerは使用頻度が低いため、イメージサイズとビルド時間を抑える目的で意図的に除外しています。必要な場合は、`Dockerfile`のbuilderステージに`RUN ./waf blimp`または`RUN ./waf antennatracker`を追加し、実行ステージの`mkdir`に`/app/Blimp`または`/app/AntennaTracker`を追加してください。（1機体あたり約3MB増加します）
+- 指定できるフレームは`docker exec ardupilot-sitl ./Tools/autotest/sim_vehicle.py --list-frame <機体>`で確認できます。
+
+### 動作しないフレーム
+
+対応している機体でも、以下のフレームは動作しません。
+
+- 外部シミュレーターが必要なフレーム（`gazebo-*`、`airsim-*`、`jsbsim`、`scrimmage-*`、`IrisRos`、`last_letter`、`CRRCSim`、`calibration`）
+- AP_Periphのバイナリが必要なフレーム（`quad-can`、`quadplane-can`）
+
+上記以外の72フレームは、起動してMAVProxy経由でHEARTBEATと位置情報を受信できることを確認しています。（arm64、ArduPilot-4.7）
 
 ---
 
@@ -126,6 +173,34 @@ docker run --add-host=host.docker.internal:host-gateway <image>
 ```sh
 cp compose.override.linux.example.yml compose.override.yml
 ```
+
+---
+
+## イメージサイズの比較
+
+`docker images` での実測値です。（arm64、ArduPilot-4.7、2026-11-26時点）
+
+| 構成 | ディスク使用量 | 圧縮サイズ | 最適化なし比 | 従来比 |
+| --- | ---: | ---: | ---: | ---: |
+| 最適化なし（ビルド環境をそのままイメージ化） | 4.71GB | 1.4GB | - | - |
+| 従来（Multi-stageビルドのみ） | 627MB | 129MB | -87% | - |
+| 現在（Multi-stageビルド + 今回の最適化） | 343MB | 77.2MB | -93% | -45%（-284MB） |
+
+「最適化なし」は、本Dockerfileのbuilderステージ（`docker build --target builder`）をそのままイメージにした場合のサイズです。「最適化なし」と「従来」はHelicopter用バイナリを追加する前の計測値で、「現在」にはHelicopter用バイナリ（約4MB）と`sim_vehicle.py`用の追加ファイルを含みます。
+
+### 今回の最適化の内容
+
+| 内容 | 削減量（概算） | 影響 |
+| --- | ---: | --- |
+| MAVProxyのcesiumモジュールのWebアセットを削除 | 114MB | なし（依存する`tornado`が未インストールのため、もともと動作しない） |
+| 使用しないMAVLink dialectを削除 | 約70MB | `all` / `ardupilotmega` / `common` / `minimal` / `standard` 以外のdialectは使用不可 |
+| Pythonバイトコード（`.pyc`）の事前コンパイルをやめる | 63MB（上記2項目と一部重複） | Python起動時に毎回コンパイルするため、MAVProxyのimportが約0.2秒遅くなる |
+| numpyのテストコードを削除 | 17MB | なし |
+| ベースイメージを`python:3.13-slim`から`debian:trixie-slim` + aptの`python3`に変更 | 約10MB | Pythonが3.13.18から3.13.5（Debian同梱版）になる |
+| SITLバイナリをstrip | 5MB | クラッシュ時のバックトレースにシンボル名が出ない |
+| venvのactivateスクリプト、lxmlのヘッダファイルを削除 | 約1MB | なし |
+
+現在のイメージの内訳は、Debianベース 110MB、Python等のaptパッケージ 46MB、Python仮想環境 88MB、SITLバイナリ（5種） 21MBです。
 
 ---
 
